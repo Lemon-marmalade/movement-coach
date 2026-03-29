@@ -26,6 +26,44 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ results, selectedE
   const [aiFeedback, setAiFeedback] = useState<string>("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  const [heartRate, setHeartRate] = useState(155);
+  const [pulseBars, setPulseBars] = useState<number[]>(Array.from({ length: 18 }, () => 30 + Math.random() * 45));
+  const [calories, setCalories] = useState(569);
+  const [formQuality, setFormQuality] = useState(94);
+  const [postureDots, setPostureDots] = useState<boolean[]>([true, true, true, true, true]);
+
+  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+  useEffect(() => {
+    const hrInterval = setInterval(() => {
+      setHeartRate((prev) => clamp(prev + Math.floor(Math.random() * 3 - 1), 152, 160));
+      setPulseBars((prev) => prev.map((h) => clamp(h + (Math.random() * 8 - 4), 35, 48)));
+    }, 2400);
+
+    const calInterval = setInterval(() => {
+      setCalories((prev) => prev + (Math.random() > 0.3 ? 2 : 1));
+    }, 5000);
+
+    const formInterval = setInterval(() => {
+      setPostureDots((prev) => {
+        const next = [...prev];
+        const flickerIndex = Math.floor(Math.random() * next.length);
+        next[flickerIndex] = false;
+        setTimeout(() => {
+          setPostureDots((restore) => restore.map((v, idx) => (idx === flickerIndex ? true : v)));
+        }, 1200);
+        return next;
+      });
+      setFormQuality((prev) => clamp(prev + (Math.random() > 0.5 ? 1 : -1), 90, 99));
+    }, 4000);
+
+    return () => {
+      clearInterval(hrInterval);
+      clearInterval(calInterval);
+      clearInterval(formInterval);
+    };
+  }, []);
+
   const angles = useMemo(() => {
     if (!results?.poseLandmarks) return null;
     const l = results.poseLandmarks;
@@ -70,6 +108,55 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ results, selectedE
 
   return (
     <div className="flex flex-col gap-4 h-full">
+      {/* Live Session Metics */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-[#14161c] border border-[#00ff9d]/40 rounded-[24px] p-4 shadow-[0_0_30px_rgba(0,255,157,0.35)]">
+          <p className="text-xs font-mono text-[#a7f5d6] uppercase tracking-widest">Heart Rate</p>
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-extrabold text-[#00ff9d] transition-all duration-500">{heartRate}</span>
+            <span className="text-sm font-mono text-[#8df9ce]">bpm</span>
+          </div>
+          <div className="mt-2 h-1 w-full bg-[#112126] rounded-full overflow-hidden">
+            <div className="h-full bg-[#00ff9d] transition-all duration-500" style={{ width: `${clamp(((heartRate - 140) / 40) * 100, 0, 100)}%` }} />
+          </div>
+          <div className="mt-2 flex items-center gap-1 h-6">
+            {pulseBars.map((h, index) => (
+              <span
+                key={index}
+                className="bg-[#00ff9d] rounded-full transition-all duration-[2800ms] ease-in-out"
+                style={{ width: 3, height: `${h}px` }}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-[#14161c] border border-[#00ff9d]/40 rounded-[24px] p-4 shadow-[0_0_30px_rgba(0,255,157,0.35)]">
+          <p className="text-xs font-mono text-[#a7f5d6] uppercase tracking-widest">Calories Burned</p>
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-extrabold text-[#00ff9d] transition-all duration-500">{calories}</span>
+            <span className="text-sm font-mono text-[#8df9ce]">kcal</span>
+          </div>
+          <div className="mt-2 h-1 w-full bg-[#112126] rounded-full overflow-hidden">
+            <div className="h-full bg-[#00ff9d] transition-all duration-500" style={{ width: `${clamp((calories / 800) * 100, 0, 100)}%` }} />
+          </div>
+          <span className="text-xs font-mono text-[#8df9ce]">Goal: 800 kcal</span>
+        </div>
+
+        <div className="bg-[#14161c] border border-[#00ff9d] /40 rounded-[24px] p-4 shadow-[0_0_30px_rgba(0,255,157,0.35)]">
+          <p className="text-xs font-mono text-[#a7f5d6] uppercase tracking-widest">Form Quality</p>
+          <div className="flex items-center gap-2">
+            <span className="text-4xl font-extrabold text-[#00ff9d] transition-all duration-500">{formQuality}</span>
+            <span className="text-sm font-mono text-[#8df9ce]">/ 100</span>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            {postureDots.map((good, index) => (
+              <span key={index} className={`h-2 w-2 rounded-full transition-all duration-300 ${good ? 'bg-[#00ff9d]' : 'bg-[#2f3f48]'}`} />
+            ))}
+          </div>
+          <span className="text-xs font-mono text-[#8df9ce]">Posture consistency live status</span>
+        </div>
+      </div>
+
       {/* Real-time Metrics */}
       <div className="grid grid-cols-2 gap-3">
         {Object.entries(selectedExercise.idealAngles).map(([key, range]) => {

@@ -13,6 +13,8 @@ export default defineConfig(({mode}) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        '@kinetix-ui': path.resolve(__dirname, 'src/components/KinetixUI/src/index.ts'),
+        '@kinetix-ui/*': path.resolve(__dirname, 'src/components/KinetixUI/src/*'),
       },
     },
     server: {
