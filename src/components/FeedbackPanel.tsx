@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Results } from '@mediapipe/pose';
-import { EXERCISES, ExerciseReference } from '@/src/types';
+import { EXERCISES, ExerciseReference } from '../types';
 import { AlertCircle, CheckCircle2, Info, MessageSquare, Zap } from 'lucide-react';
-import { cn } from '@/src/lib/utils';
+import { cn } from '../lib/utils';
 import { GoogleGenAI } from "@google/genai";
+import { speakFeedback } from '../lib/elevenlabs';
 
 interface FeedbackPanelProps {
   results: Results | null;
@@ -59,7 +60,9 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ results, selectedE
         Ideal ranges: ${JSON.stringify(selectedExercise.idealAngles)}
         Provide concise, spatially specific feedback for a physical therapist.`,
       });
-      setAiFeedback(response.text || "No feedback available.");
+      const feedbackText = response.text || "No feedback available.";
+      setAiFeedback(feedbackText);
+      speakFeedback(feedbackText);
     } catch (error) {
       console.error("AI Analysis error:", error);
       setAiFeedback("Analysis failed. Check connection.");
