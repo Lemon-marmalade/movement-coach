@@ -16,11 +16,13 @@ export const PoseAnalyzer: React.FC<PoseAnalyzerProps> = ({ onResults, isRecordi
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isActive = useRef(true);
 
   useEffect(() => {
+    isActive.current = true;
     const pose = new Pose({
       locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`;
       },
     });
 
@@ -34,6 +36,8 @@ export const PoseAnalyzer: React.FC<PoseAnalyzerProps> = ({ onResults, isRecordi
     });
 
     pose.onResults((results) => {
+      if (!isActive.current) return;
+      
       onResults(results);
       
       if (canvasRef.current && videoRef.current) {
@@ -71,7 +75,7 @@ export const PoseAnalyzer: React.FC<PoseAnalyzerProps> = ({ onResults, isRecordi
     if (videoRef.current) {
       const camera = new Camera(videoRef.current, {
         onFrame: async () => {
-          if (videoRef.current) {
+          if (videoRef.current && isActive.current) {
             await pose.send({ image: videoRef.current });
           }
         },
@@ -80,14 +84,21 @@ export const PoseAnalyzer: React.FC<PoseAnalyzerProps> = ({ onResults, isRecordi
       });
       
       camera.start()
-        .then(() => setIsCameraReady(true))
+        .then(() => {
+          if (isActive.current) setIsCameraReady(true);
+        })
         .catch((err) => {
           console.error('Camera start error:', err);
-          setError('Failed to access camera. Please ensure permissions are granted.');
+          if (isActive.current) setError('Failed to access camera. Please ensure permissions are granted.');
         });
     }
 
     return () => {
+      isActive.current = false;
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
       pose.close();
     };
   }, [onResults]);

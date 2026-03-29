@@ -30,15 +30,26 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ results, selectedE
   const angles = useMemo(() => {
     if (!results?.poseLandmarks) return null;
     const l = results.poseLandmarks;
-    
-    return {
-      left_knee: calculateAngle(l[23], l[25], l[27]),
-      right_knee: calculateAngle(l[24], l[26], l[28]),
-      left_hip: calculateAngle(l[11], l[23], l[25]),
-      right_hip: calculateAngle(l[12], l[24], l[26]),
-      back: calculateAngle(l[11], l[23], l[24]), // Simplified back angle
-    };
-  }, [results]);
+
+    const m: Record<string, number> = {};
+    // Map landmarks to the specific keys defined in EXERCISES for each protocol
+    if (selectedExercise.id === 'squat') {
+      m.knee_angle = calculateAngle(l[23], l[25], l[27]);
+      m.hip_angle = calculateAngle(l[11], l[23], l[25]);
+      m.back_angle = calculateAngle(l[11], l[23], l[24]);
+    } else if (selectedExercise.id === 'lunge') {
+      m.front_knee = calculateAngle(l[23], l[25], l[27]);
+      m.back_knee = calculateAngle(l[24], l[26], l[28]);
+    } else if (selectedExercise.id === 'overhead_press') {
+      m.shoulder_flexion = calculateAngle(l[23], l[11], l[13]);
+      m.elbow_extension = calculateAngle(l[11], l[13], l[15]);
+    } else if (selectedExercise.id === 'deadlift') {
+      m.hip_hinge = calculateAngle(l[11], l[23], l[25]);
+      m.back_flatness = calculateAngle(l[11], l[23], l[24]);
+    }
+
+    return m;
+  }, [results, selectedExercise]);
 
   const getStatus = (angle: number, range: { min: number; max: number }) => {
     if (angle < range.min) return 'low';
@@ -51,16 +62,23 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ results, selectedE
     setIsAnalyzing(true);
     
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Analyze this pose data for a ${selectedExercise.name}. 
-        Landmarks: ${JSON.stringify(results.poseLandmarks.slice(0, 33).map(l => ({ x: l.x.toFixed(2), y: l.y.toFixed(2), z: l.z.toFixed(2) })))}
-        Current calculated angles: ${JSON.stringify(angles)}
-        Ideal ranges: ${JSON.stringify(selectedExercise.idealAngles)}
-        Provide concise, spatially specific feedback for a physical therapist.`,
+      const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+      const { text } = await genAI.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: [{
+          role: "user",
+          parts: [{
+            text: `Analyze this pose data for a ${selectedExercise.name}. 
+            Landmarks: ${JSON.stringify(results.poseLandmarks.slice(0, 33).map(l => ({ x: l.x.toFixed(2), y: l.y.toFixed(2), z: l.z.toFixed(2) })))}
+            Current calculated angles: ${JSON.stringify(angles)}
+            Ideal ranges: ${JSON.stringify(selectedExercise.idealAngles)}
+            Provide 1-2 sentences of concise, spatially specific coaching feedback.`
+          }]
+        }]
       });
-      const feedbackText = response.text || "No feedback available.";
+
+      const feedbackText = text || "No feedback available.";
       setAiFeedback(feedbackText);
       speakFeedback(feedbackText);
     } catch (error) {

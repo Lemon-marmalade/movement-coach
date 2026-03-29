@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Results } from '@mediapipe/pose';
 import { PoseAnalyzer } from './components/PoseAnalyzer';
 import { Skeleton3D } from './components/Skeleton3D';
@@ -13,6 +13,7 @@ export default function App() {
   const [selectedExercise, setSelectedExercise] = useState<ExerciseReference>(EXERCISES[0]);
   const [isRecording, setIsRecording] = useState(false);
   const [viewMode, setViewMode] = useState<'split' | 'focus'>('split');
+  const [user, setUser] = useState<any>(null);
 
   const handleResults = useCallback((res: Results) => {
     setResults(res);
@@ -58,8 +59,16 @@ export default function App() {
           <button className="p-2 text-zinc-500 hover:text-white transition-colors">
             <Settings className="w-4 h-4" />
           </button>
-          <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
-            <User className="w-4 h-4 text-zinc-400" />
+          <div className="flex items-center gap-3">
+            {user && (
+              <div className="hidden md:block text-right">
+                <p className="text-[10px] font-mono text-white leading-none mb-0.5">{user.user_metadata?.full_name}</p>
+                <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter leading-none">Clinical Admin</p>
+              </div>
+            )}
+            <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center overflow-hidden">
+              <User className="w-4 h-4 text-zinc-400" />
+            </div>
           </div>
         </div>
       </header>
